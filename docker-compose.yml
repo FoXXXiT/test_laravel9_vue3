@@ -1,0 +1,63 @@
+version: '3'
+services:
+
+  #PHP Service
+  app:
+    build:
+      context: .
+      dockerfile: dev/docker/php/Dockerfile
+    container_name: asabix
+    restart: unless-stopped
+    tty: true
+    environment:
+      SERVICE_NAME: app
+      SERVICE_TAGS: dev
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+      - ./dev/docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - app-network
+
+  #Nginx Service
+  webserver:
+    image: nginx:alpine
+    container_name: asabix-webserver
+    restart: unless-stopped
+    tty: true
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./:/var/www
+      - ./dev/docker/nginx/conf.d:/etc/nginx/conf.d
+    networks:
+      - app-network
+
+  #MySQL Service
+  database:
+    image: mariadb
+    command: --default-authentication-plugin=mysql_native_password
+    container_name: asabix-database
+    restart: unless-stopped
+    tty: true
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_DATABASE: asabix
+      MYSQL_USER: asabix
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: secret
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - ./dev/docker/mysql/general.log:/var/log/mysql/general.log
+      - ./dev/docker/mysql/my.cnf:/etc/mysql/my.cnf
+      - ./dev/docker/mysql/volumes/db.mysql:/var/lib/mysql
+    networks:
+      - app-network
+
+#Docker Networks
+networks:
+  app-network:
+    driver: bridge
